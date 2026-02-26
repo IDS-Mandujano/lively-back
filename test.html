@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head><title>Lively Debug Tool</title></head>
+<body>
+    <h1>Lively Backend Test</h1>
+
+    <div>
+        <input type="text" id="searchInput" placeholder="Buscar artista o canción...">
+        <button onclick="searchMusic()">Buscar en Deezer</button>
+    </div>
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <hr>
+
+    <div>
+        <h3>WebSocket Status: <span id="wsStatus">Disconnected</span></h3>
+        <button onclick="connectWS()">Conectar al Hub</button>
+        <div id="wsMessages" style="background: #eee; padding: 10px; min-height: 50px;">
+            Mensajes del Hub aparecerán aquí...
+        </div>
+    </div>
+
+    <script>
+        // 1. Probar Búsqueda de Música (REST)
+        async function searchMusic() {
+            const query = document.getElementById('searchInput').value;
+            const resContainer = document.getElementById('results');
+            resContainer.innerHTML = "Cargando...";
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/search?q=${query}`);
+                const data = await response.json();
+                
+                resContainer.innerHTML = data.map(track => `
+                    <div style="border-bottom: 1px solid #ccc; margin-bottom: 10px;">
+                        <img src="${track.album.cover_medium}" width="50">
+                        <strong>${track.title}</strong> - ${track.artist.name}
+                        <br>
+                        <audio controls src="${track.preview}"></audio>
+                    </div>
+                `).join('');
+            } catch (e) {
+                resContainer.innerHTML = "Error: " + e.message;
+            }
+        }
+
+        // 2. Probar Tiempo Real (WebSocket)
+        function connectWS() {
+            const socket = new WebSocket("ws://localhost:8080/ws/1/233325");
+            const status = document.getElementById('wsStatus');
+            const msgBox = document.getElementById('wsMessages');
+
+            socket.onopen = () => { status.innerText = "Connected"; status.style.color = "green"; };
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                msgBox.innerHTML += `<p>Nuevo mensaje: ${JSON.stringify(data)}</p>`;
+            };
+            socket.onclose = () => { status.innerText = "Disconnected"; status.style.color = "red"; };
+        }
+    </script>
+</body>
+</html>
