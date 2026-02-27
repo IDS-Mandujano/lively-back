@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"fmt"
 	"lively-backend/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -19,8 +21,22 @@ func NewRoomRepository(db *gorm.DB) RoomRepository {
 }
 
 func (r *roomRepository) UpdateRoomTrack(roomID uint, trackID int) error {
-	// Actualiza solo el campo current_track_id en la tabla rooms
-	return r.db.Model(&models.Room{}).Where("id = ?", roomID).Update("current_track_id", trackID).Error
+	// Intentamos obtener la sala; si no existe la creamos y seteamos current_track_id
+	var room models.Room
+	if err := r.db.First(&room, roomID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Crear sala con valores por defecto para cumplir constraints (Name, Type)
+			room = models.Room{
+				ID:             roomID,
+				Name:           fmt.Sprintf("room-%d", roomID),
+				Type:           "auto",
+				CurrentTrackID: trackID,
+			}
+			return r.db.Create(&room).Error
+		}
+		return err
+	}
+	return r.db.Model(&room).Update("current_track_id", trackID).Error
 }
 
 func (r *roomRepository) GetRoomByID(roomID uint) (*models.Room, error) {
