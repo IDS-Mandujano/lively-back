@@ -48,13 +48,14 @@ func (s *roomService) SyncTrack(roomID uint, trackID int) error {
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
-		"track_id":            trackID,
-		"start_timestamp_ms":  startTs,
-		"deezer_reference_id": deezerRef,
-		"track_url":           trackURL,
-		"title":               title,
-		"cover_medium":        cover,
-		"duration":            duration,
+		"track_id":             trackID,
+		"start_timestamp_ms":   startTs,
+		"deezer_reference_id":  deezerRef,
+		"track_url":            trackURL,
+		"title":                title,
+		"cover_medium":         cover,
+		"duration":             duration,
+		"requires_deezer_auth": true,
 	})
 
 	s.hub.Broadcast <- websocket.Message{

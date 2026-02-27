@@ -39,6 +39,7 @@ func main() {
 		api.GET("/artist/:id", musicHandler.GetArtist)
 		api.GET("/radios", musicHandler.GetRadios)
 		api.GET("/track/:id", musicHandler.GetTrack)
+		api.GET("/time", musicHandler.GetServerTime)
 
 	}
 

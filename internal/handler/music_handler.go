@@ -4,6 +4,7 @@ import (
 	"lively-backend/internal/service"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -66,4 +67,9 @@ func (h *MusicHandler) GetTrack(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, track)
+}
+
+// Devuelve tiempo del servidor en ms para sincronización de relojes
+func (h *MusicHandler) GetServerTime(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"server_time_ms": time.Now().UnixMilli()})
 }

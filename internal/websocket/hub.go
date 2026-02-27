@@ -63,6 +63,12 @@ func (h *Hub) Run() {
 			// Guardamos el último mensaje conocido por sala para nuevas conexiones
 			h.LastMessage[msg.RoomID] = msg
 
+			// Log payload being sent for debugging clients
+			if pl, err := json.Marshal(msg); err == nil {
+				log.Printf("Hub broadcast to room %d: %s", msg.RoomID, string(pl))
+			} else {
+				log.Printf("Hub broadcast marshal error: %v", err)
+			}
 			for client := range h.Rooms[msg.RoomID] {
 				payload, _ := json.Marshal(msg)
 				select {
