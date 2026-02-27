@@ -1,13 +1,14 @@
 package models
 
 type DeezerTrack struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	Preview   string `json:"preview"`
-	Artist    struct {
+	ID       int    `json:"id"`
+	Title    string `json:"title"`
+	Preview  string `json:"preview"`
+	Duration int    `json:"duration"`
+	Artist   struct {
 		Name string `json:"name"`
 	} `json:"artist"`
-	Album     struct {
+	Album struct {
 		CoverMedium string `json:"cover_medium"`
 	} `json:"album"`
 }

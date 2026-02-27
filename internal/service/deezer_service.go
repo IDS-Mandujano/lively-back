@@ -1,36 +1,36 @@
 package service
 
 import (
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "lively-backend/internal/models"
+	"encoding/json"
+	"fmt"
+	"lively-backend/internal/models"
+	"net/http"
 	"os"
 )
 
 type DeezerService interface {
-    SearchTracks(query string) ([]models.DeezerTrack, error)
-    GetArtistDetails(artistID string) (map[string]interface{}, error)
-    GetGenreRadios() (map[string]interface{}, error)
+	SearchTracks(query string) ([]models.DeezerTrack, error)
+	GetArtistDetails(artistID string) (map[string]interface{}, error)
+	GetGenreRadios() (map[string]interface{}, error)
+	GetTrackByID(trackID int) (*models.DeezerTrack, error)
 }
 
 type deezerService struct {
-    baseURL string
+	baseURL string
 }
 
 func NewDeezerService() DeezerService {
 
 	baseURL := os.Getenv("DEEZER_BASE_URL")
 
-    if baseURL == "" {
-        baseURL = "https://api.deezer.com"
-    }
+	if baseURL == "" {
+		baseURL = "https://api.deezer.com"
+	}
 
-    return &deezerService{
-        baseURL: baseURL,
-    }
+	return &deezerService{
+		baseURL: baseURL,
+	}
 }
-
 
 func (s *deezerService) SearchTracks(query string) ([]models.DeezerTrack, error) {
 	url := fmt.Sprintf("%s/search?q=%s", s.baseURL, query)
@@ -71,4 +71,19 @@ func (s *deezerService) GetGenreRadios() (map[string]interface{}, error) {
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)
 	return result, nil
+}
+
+func (s *deezerService) GetTrackByID(trackID int) (*models.DeezerTrack, error) {
+	url := fmt.Sprintf("%s/track/%d", s.baseURL, trackID)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var track models.DeezerTrack
+	if err := json.NewDecoder(resp.Body).Decode(&track); err != nil {
+		return nil, err
+	}
+	return &track, nil
 }

@@ -19,13 +19,12 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
 	roomRepo := repository.NewRoomRepository(db)
-	roomService := service.NewRoomService(roomRepo, hub)
-	roomHandler := handler.NewRoomHandler(roomService)
-
 	deezerService := service.NewDeezerService()
+	roomService := service.NewRoomService(roomRepo, hub, deezerService)
+	roomHandler := handler.NewRoomHandler(roomService)
 	musicHandler := handler.NewMusicHandler(deezerService)
 
-	wsHandler := handler.NewWebSocketHandler(hub)
+	wsHandler := handler.NewWebSocketHandler(hub, roomRepo)
 
 	router := gin.Default()
 
@@ -39,8 +38,8 @@ func main() {
 		api.GET("/search", musicHandler.Search)
 		api.GET("/artist/:id", musicHandler.GetArtist)
 		api.GET("/radios", musicHandler.GetRadios)
+		api.GET("/track/:id", musicHandler.GetTrack)
 
-		
 	}
 
 	router.GET("/ws/:roomID/:userID", wsHandler.HandleWS)

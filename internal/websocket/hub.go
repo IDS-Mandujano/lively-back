@@ -3,9 +3,9 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
-	
 )
 
 type Message struct {
@@ -22,24 +22,28 @@ type Client struct {
 	RoomID uint
 }
 
-
 type Hub struct {
-	Rooms      map[uint]map[*Client]bool 
-	Broadcast  chan Message     
-	Register   chan *Client      
-	Unregister chan *Client          
+	Rooms       map[uint]map[*Client]bool
+	Broadcast   chan Message
+	Register    chan *Client
+	Unregister  chan *Client
+	LastMessage map[uint]Message
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		Rooms:      make(map[uint]map[*Client]bool),
-		Broadcast:  make(chan Message),
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
+		Rooms:       make(map[uint]map[*Client]bool),
+		Broadcast:   make(chan Message),
+		Register:    make(chan *Client),
+		Unregister:  make(chan *Client),
+		LastMessage: make(map[uint]Message),
 	}
 }
 
 func (h *Hub) Run() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case client := <-h.Register:
@@ -56,7 +60,9 @@ func (h *Hub) Run() {
 			}
 
 		case msg := <-h.Broadcast:
-			
+			// Guardamos el último mensaje conocido por sala para nuevas conexiones
+			h.LastMessage[msg.RoomID] = msg
+
 			for client := range h.Rooms[msg.RoomID] {
 				payload, _ := json.Marshal(msg)
 				select {
@@ -64,6 +70,19 @@ func (h *Hub) Run() {
 				default:
 					close(client.Send)
 					delete(h.Rooms[msg.RoomID], client)
+				}
+			}
+		case <-ticker.C:
+			// Periodic resync: reenviamos el último mensaje a cada sala para corregir drift
+			for roomID, last := range h.LastMessage {
+				for client := range h.Rooms[roomID] {
+					payload, _ := json.Marshal(last)
+					select {
+					case client.Send <- payload:
+					default:
+						close(client.Send)
+						delete(h.Rooms[roomID], client)
+					}
 				}
 			}
 		}

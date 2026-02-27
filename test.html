@@ -15,8 +15,21 @@
     <div>
         <h3>WebSocket Status: <span id="wsStatus">Disconnected</span></h3>
         <button onclick="connectWS()">Conectar al Hub</button>
+        <button id="allowPlay" onclick="allowPlay()">Permitir reproducción automática</button>
+        <div style="margin-top:10px;">
+            <input id="emitTrackId" placeholder="Track ID Deezer (ej. 3135556)" style="width:220px;">
+            <button onclick="emitTrack()">Emitir pista (rooms/sync)</button>
+        </div>
         <div id="wsMessages" style="background: #eee; padding: 10px; min-height: 50px;">
             Mensajes del Hub aparecerán aquí...
+        </div>
+    </div>
+
+    <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+        <img id="trackCover" src="" alt="cover" width="80" style="display:none;">
+        <div>
+            <div id="trackTitle" style="font-weight:bold"></div>
+            <audio id="roomAudio" controls style="display:block; margin-top:5px; width:100%;"></audio>
         </div>
     </div>
 
@@ -37,6 +50,9 @@
                         <strong>${track.title}</strong> - ${track.artist.name}
                         <br>
                         <audio controls src="${track.preview}"></audio>
+                        <br>
+                        <small>ID: ${track.id}</small>
+                        <button onclick="emitTrackFromSearch(${track.id})">Emitir a sala</button>
                     </div>
                 `).join('');
             } catch (e) {
@@ -54,9 +70,75 @@
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 msgBox.innerHTML += `<p>Nuevo mensaje: ${JSON.stringify(data)}</p>`;
+
+                // Mostrar datos clave si vienen en payload
+                try {
+                    const payload = (typeof data.payload === 'string') ? JSON.parse(data.payload) : data.payload || {};
+                    if (payload.track_url) msgBox.innerHTML += `<p>Track URL: ${payload.track_url}</p>`;
+                    if (payload.start_timestamp_ms) msgBox.innerHTML += `<p>Start ts: ${payload.start_timestamp_ms} (offset ${(Date.now()-payload.start_timestamp_ms)/1000}s)</p>`;
+                    if (payload.title) document.getElementById('trackTitle').innerText = payload.title;
+                    if (payload.cover_medium) { 
+                        const img = document.getElementById('trackCover');
+                        img.src = payload.cover_medium; img.style.display = 'block';
+                    }
+                } catch(e){}
+
+                // Manejar UPDATE_TRACK para reproducir la pista
+                if (data.type === "UPDATE_TRACK") {
+                    const payload = (typeof data.payload === 'string') ? JSON.parse(data.payload) : data.payload || {};
+                    const trackUrl = payload.track_url || payload.preview || (payload.track && payload.track.preview) || null;
+                    const startTs = payload.start_timestamp_ms || payload.start_timestamp || null;
+                    if (trackUrl) {
+                        const audio = document.getElementById('roomAudio');
+                        audio.src = trackUrl;
+
+                        // Esperar metadata para setear posición
+                        audio.addEventListener('loadedmetadata', function setPos() {
+                            audio.removeEventListener('loadedmetadata', setPos);
+                            if (startTs) {
+                                const offset = (Date.now() - startTs) / 1000;
+                                if (!isNaN(offset) && offset > 0 && offset < audio.duration) {
+                                    audio.currentTime = offset;
+                                }
+                            }
+                            // Intentar reproducir (puede requerir interacción del usuario según la política del navegador)
+                            audio.play().catch(e => {
+                                console.warn('Autoplay bloqueado, presiona "Permitir reproducción automática" o interactúa con la página.');
+                            });
+                        });
+                    }
+                }
             };
             socket.onclose = () => { status.innerText = "Disconnected"; status.style.color = "red"; };
         }
+
+            async function emitTrack() {
+                const trackId = parseInt(document.getElementById('emitTrackId').value || '0');
+                if (!trackId) return alert('Ingresa un track_id válido');
+                try {
+                    const res = await fetch('http://localhost:8080/api/rooms/sync', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({room_id: 1, track_id: trackId})
+                    });
+                    const json = await res.json();
+                    const msgBox = document.getElementById('wsMessages');
+                    msgBox.innerHTML += `<p>Sync response: ${JSON.stringify(json)}</p>`;
+                } catch (e) {
+                    alert('Error al emitir: ' + e.message);
+                }
+            }
+
+            function emitTrackFromSearch(id) {
+                document.getElementById('emitTrackId').value = id;
+                emitTrack();
+            }
+
+            function allowPlay() {
+                const audio = document.getElementById('roomAudio');
+                audio.muted = false;
+                audio.play().catch(e => console.warn('No se pudo iniciar reproducción automáticamente:', e));
+            }
     </script>
 </body>
 </html>
