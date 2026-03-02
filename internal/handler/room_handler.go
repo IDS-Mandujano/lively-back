@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"net/http"
 	"lively-backend/internal/service"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,8 +17,10 @@ func NewRoomHandler(rs service.RoomService) *RoomHandler {
 
 func (h *RoomHandler) SyncTrack(c *gin.Context) {
 	var input struct {
-		RoomID  uint `json:"room_id" binding:"required"`
-		TrackID int  `json:"track_id" binding:"required"`
+		RoomID      uint   `json:"room_id" binding:"required"`
+		TrackID     int    `json:"track_id"`
+		Type        string `json:"type"`          // "radio" | "artist" | "auto"
+		DeezerRefID int    `json:"deezer_ref_id"` // id de radio o artista
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -26,12 +28,31 @@ func (h *RoomHandler) SyncTrack(c *gin.Context) {
 		return
 	}
 
-	// Llamamos al servicio que actualiza DB y emite al WebSocket
-	err := h.roomService.SyncTrack(input.RoomID, input.TrackID)
+	var err error
+	if input.TrackID > 0 {
+		err = h.roomService.SyncTrack(input.RoomID, input.TrackID)
+	} else {
+		err = h.roomService.BootstrapRoom(input.RoomID, input.Type, input.DeezerRefID)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al sincronizar la sala"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "Sincronización enviada"})
+}
+
+func (h *RoomHandler) PrevTrack(c *gin.Context) {
+	var input struct {
+		RoomID uint `json:"room_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos de sala inválidos"})
+		return
+	}
+	if err := h.roomService.PrevTrack(input.RoomID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al retroceder pista"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "Retroceso enviado"})
 }

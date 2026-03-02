@@ -24,7 +24,7 @@ func main() {
 	roomHandler := handler.NewRoomHandler(roomService)
 	musicHandler := handler.NewMusicHandler(deezerService)
 
-	wsHandler := handler.NewWebSocketHandler(hub, roomRepo)
+	wsHandler := handler.NewWebSocketHandler(hub, roomRepo, roomService)
 
 	router := gin.Default()
 
@@ -35,10 +35,13 @@ func main() {
 		api.POST("/register", userHandler.Register)
 		api.POST("/login", userHandler.Login)
 		api.POST("/rooms/sync", roomHandler.SyncTrack)
+		api.POST("/rooms/prev", roomHandler.PrevTrack)
 		api.GET("/search", musicHandler.Search)
 		api.GET("/artist/:id", musicHandler.GetArtist)
 		api.GET("/radios", musicHandler.GetRadios)
+		api.GET("/radio/:id/tracks", musicHandler.GetRadioTracks)
 		api.GET("/track/:id", musicHandler.GetTrack)
+		api.GET("/artist/:id/top", musicHandler.GetArtistTop)
 		api.GET("/time", musicHandler.GetServerTime)
 
 	}

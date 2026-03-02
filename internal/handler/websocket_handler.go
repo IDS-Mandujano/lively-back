@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"lively-backend/internal/repository"
+	"lively-backend/internal/service"
 	"lively-backend/internal/websocket"
 	"net/http"
 	"strconv"
@@ -22,10 +24,11 @@ var upgrader = gorilla.Upgrader{
 type WebSocketHandler struct {
 	Hub  *websocket.Hub
 	Repo repository.RoomRepository
+	Svc  service.RoomService
 }
 
-func NewWebSocketHandler(hub *websocket.Hub, repo repository.RoomRepository) *WebSocketHandler {
-	return &WebSocketHandler{Hub: hub, Repo: repo}
+func NewWebSocketHandler(hub *websocket.Hub, repo repository.RoomRepository, svc service.RoomService) *WebSocketHandler {
+	return &WebSocketHandler{Hub: hub, Repo: repo, Svc: svc}
 }
 
 func (h *WebSocketHandler) HandleWS(c *gin.Context) {
@@ -64,22 +67,10 @@ func (h *WebSocketHandler) HandleWS(c *gin.Context) {
 			}
 		}
 	} else {
-		// Fallback: si no hay mensaje en memoria, intentar leer DB y enviar solo track_id
-		if room, err := h.Repo.GetRoomByID(client.RoomID); err == nil && room != nil {
-			payload, _ := json.Marshal(map[string]interface{}{"track_id": room.CurrentTrackID})
-			msg := websocket.Message{
-				Type:    "UPDATE_TRACK",
-				RoomID:  client.RoomID,
-				Payload: payload,
-			}
-			if client.Send != nil {
-				if data, err := json.Marshal(msg); err == nil {
-					select {
-					case client.Send <- data:
-					default:
-					}
-				}
-			}
-		}
+		// Bootstrap inicial: si no hay estado, podemos recibir query ?type=radio|artist&deezer_ref=123
+		roomType := c.Query("type")
+		deezerRef, _ := strconv.Atoi(c.DefaultQuery("deezer_ref", "0"))
+		_ = h.Repo.UpdateRoomMeta(client.RoomID, fmt.Sprintf("room-%d", client.RoomID), roomType, deezerRef)
+		_ = h.Svc.BootstrapRoom(client.RoomID, roomType, deezerRef)
 	}
 }

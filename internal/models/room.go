@@ -8,6 +8,7 @@ type Room struct {
 	Type              string    `gorm:"not null" json:"type"` 
 	DeezerReferenceID int       `json:"deezer_reference_id"`  
 	CurrentTrackID    int       `json:"current_track_id"`
+	PreviousTrackID   int       `json:"previous_track_id"`
 	CreatedAt         time.Time `json:"created_at"`
 
 	Members []User `gorm:"many2many:room_members;" json:"members,omitempty"`

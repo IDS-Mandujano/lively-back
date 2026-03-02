@@ -18,6 +18,7 @@ func InitDB(dsn string) *gorm.DB {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Room{},
+		&models.RoomHistory{},
 	)
 	if err != nil {
 		log.Fatalf("Error al migrar la base de datos: %v", err)
