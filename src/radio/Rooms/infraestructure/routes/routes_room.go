@@ -1,18 +1,30 @@
 package routes
 
 import (
+	"lively-backend/src/core/database"
+	usecases "lively-backend/src/radio/Rooms/application/useCases"
+	"lively-backend/src/radio/Rooms/infraestructure/controllers"
+	"lively-backend/src/radio/Rooms/infraestructure/mysql"
 	"lively-backend/src/radio/Rooms/infraestructure/sockets"
 	"net/http"
 )
 
-// SetupRoomRoutes configura las rutas de WebSockets para las salas
 func SetupRoomRoutes(mux *http.ServeMux) {
-	// 1. Creamos al gerente de salas general (solo nace una vez)
+	// --- BASE DE DATOS (REST API) ---
+	roomRepo := mysql.NewMySQLRoomRepository(database.DB)
+
+	// Ruta para crear (POST)
+	createRoomUC := usecases.NewCreateRoomUseCase(roomRepo)
+	createRoomCtrl := controllers.NewCreateRoomController(createRoomUC)
+	mux.HandleFunc("/api/rooms", createRoomCtrl.Handle)
+
+	// Ruta para listar (GET) <--- NUEVO
+	getAllRoomsUC := usecases.NewGetAllRoomsUseCase(roomRepo)
+	getAllRoomsCtrl := controllers.NewGetAllRoomsController(getAllRoomsUC)
+	mux.HandleFunc("/api/rooms/list", getAllRoomsCtrl.Handle)
+
+	// --- TIEMPO REAL (WEBSOCKETS) ---
 	roomManager := sockets.NewManager()
-
-	// 2. Creamos el controlador inyectándole al gerente
 	wsController := sockets.NewWsController(roomManager)
-
-	// 3. Abrimos la puerta al público
 	mux.HandleFunc("/api/ws/rooms", wsController.HandleConnections)
 }

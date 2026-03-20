@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
 	// Les ponemos un alias a los imports para diferenciarlos
 	"lively-backend/src/core/database"
 	roomRoutes "lively-backend/src/radio/Rooms/infraestructure/routes"
 	stationRoutes "lively-backend/src/radio/Stations/infraestructure/routes"
+	userRoutes "lively-backend/src/users/infraestructure/routes"
+
 )
 
 func main() {
@@ -19,9 +20,8 @@ func main() {
 
 	// Llamamos a nuestra función para que registre las rutas de "Stations" (REST API)
 	stationRoutes.SetupStationRoutes(mux)
-
-	// Llamamos a nuestra función para registrar las rutas de "Rooms" (WebSockets)
-	roomRoutes.SetupRoomRoutes(mux) // <--- NUEVO
+	roomRoutes.SetupRoomRoutes(mux)
+	userRoutes.SetupUserRoutes(mux) // <--- NUEVO
 
 	// Definimos el puerto donde correrá el backend
 	port := ":8080"
