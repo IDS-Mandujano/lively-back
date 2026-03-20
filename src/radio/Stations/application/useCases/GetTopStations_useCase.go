@@ -19,7 +19,7 @@ func NewGetTopStationsUseCase(repo repository.IStationRepository) *GetTopStation
 
 func (uc *GetTopStationsUseCase) Execute(ctx context.Context, limit int) ([]entity.Station, error) {
 	if limit <= 0 {
-		limit = 20 // Por defecto traemos el Top 20
+		limit = 20
 	}
 
 	return uc.stationRepo.GetTop(ctx, limit)

@@ -25,7 +25,7 @@ func NewCreateRoomUseCase(repo repository.IRoomRepository) *CreateRoomUseCase {
 }
 
 func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput) (*entity.Room, error) {
-	// Validaciones básicas
+
 	if input.ID == "" || input.Name == "" {
 		return nil, errors.New("el ID de la sala y el nombre son obligatorios")
 	}

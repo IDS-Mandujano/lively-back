@@ -5,7 +5,6 @@ import (
 	"lively-backend/src/radio/Stations/domain/entity"
 )
 
-// IStationRepository define qué podemos hacer con las estaciones
 type IStationRepository interface {
 	GetByCategory(ctx context.Context, category string, limit int) ([]entity.Station, error)
 	SearchByName(ctx context.Context, name string, limit int) ([]entity.Station, error)

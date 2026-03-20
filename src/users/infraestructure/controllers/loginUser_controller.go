@@ -28,10 +28,9 @@ func (c *LoginUserController) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ejecutamos el caso de uso que nos devuelve el Token y los datos del usuario
 	token, user, err := c.useCase.Execute(r.Context(), input)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized) // 401 Unauthorized
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
