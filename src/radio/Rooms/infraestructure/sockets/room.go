@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-
 )
 
 type Client struct {
@@ -103,7 +102,7 @@ func (c *Client) ReadPump() {
 			// Leemos qué estación propusieron
 			var proposePayload ProposePayload
 			json.Unmarshal(wsMsg.Payload, &proposePayload)
-			
+
 			c.Room.ProposedStation = &entity.Station{
 				ID:        proposePayload.StationID,
 				Name:      proposePayload.StationName,
@@ -141,6 +140,9 @@ func (c *Client) ReadPump() {
 			totalVotes := c.Room.VotesInFavor + c.Room.VotesAgainst
 			totalClients := len(c.Room.Clients)
 
+			votesInFavor := c.Room.VotesInFavor
+			votesAgainst := c.Room.VotesAgainst
+
 			var electionFinished bool
 			var approved bool
 
@@ -149,13 +151,23 @@ func (c *Client) ReadPump() {
 				electionFinished = true
 				approved = c.Room.VotesInFavor > c.Room.VotesAgainst
 				c.Room.VoteActive = false // Se cierra la urna
-				
+
 				// Si ganó el Sí, actualizamos la música de la sala
 				if approved {
 					c.Room.CurrentStation = c.Room.ProposedStation
 				}
 			}
 			c.Room.mu.Unlock()
+
+			// Enviamos el conteo parcial para que Android actualice la UI en tiempo real.
+			voteUpdate, _ := json.Marshal(map[string]interface{}{
+				"type": "vote_updated",
+				"payload": map[string]int{
+					"in_favor": votesInFavor,
+					"against":  votesAgainst,
+				},
+			})
+			c.Room.Broadcast <- voteUpdate
 
 			// Si la elección terminó, le gritamos el resultado a todos
 			if electionFinished {
