@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"lively-backend/src/radio/Rooms/domain/entity"
+	"log"
 )
 
 type MySQLRoomRepository struct {
@@ -23,6 +24,7 @@ func (repo *MySQLRoomRepository) Create(ctx context.Context, room *entity.Room) 
 
 	_, err := repo.db.ExecContext(ctx, query, room.ID, room.Name, room.Description, room.CreatedBy)
 	if err != nil {
+		log.Printf("[rooms:repo] create failed id=%s created_by=%d err=%v", room.ID, room.CreatedBy, err)
 		return err
 	}
 

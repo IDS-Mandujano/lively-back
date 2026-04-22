@@ -32,9 +32,11 @@ func NewWsController(m *Manager) *WsController {
 }
 
 func (c *WsController) HandleConnections(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[ws] incoming remote=%s query=%s", r.RemoteAddr, r.URL.RawQuery)
 	// 1. Obtenemos el ID de la sala
 	roomID := r.URL.Query().Get("id")
 	if roomID == "" {
+		log.Printf("[ws] rejected missing room id")
 		http.Error(w, "Falta el ID de la sala", http.StatusBadRequest)
 		return
 	}
@@ -42,6 +44,7 @@ func (c *WsController) HandleConnections(w http.ResponseWriter, r *http.Request)
 	// --- LA BARRERA DE SEGURIDAD (EL CADENERO) ---
 	tokenString := r.URL.Query().Get("token")
 	if tokenString == "" {
+		log.Printf("[ws] rejected room=%s missing token", roomID)
 		http.Error(w, "No autorizado. Falta el token de acceso", http.StatusUnauthorized)
 		return
 	}
@@ -57,6 +60,7 @@ func (c *WsController) HandleConnections(w http.ResponseWriter, r *http.Request)
 
 	// Si el token no sirve, caducó, o es inventado, le cerramos la puerta en la cara
 	if err != nil || !token.Valid {
+		log.Printf("[ws] rejected room=%s invalid token err=%v", roomID, err)
 		http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
 		return
 	}
@@ -64,14 +68,14 @@ func (c *WsController) HandleConnections(w http.ResponseWriter, r *http.Request)
 	// Opcional: Extraemos los datos del usuario por si queremos saber quién entró
 	var username string
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		username = claims["username"].(string)
+		username, _ = claims["username"].(string)
 	}
 	// ---------------------------------------------
 
 	// 2. Si pasó el filtro, transformamos la conexión a WebSocket
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("Error al crear el WebSocket:", err)
+		log.Println("[ws] Error al crear el WebSocket:", err)
 		return
 	}
 
