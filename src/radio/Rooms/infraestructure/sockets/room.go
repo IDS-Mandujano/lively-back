@@ -35,6 +35,11 @@ func NewRoom(id string) *Room {
 		Clients:      make(map[*Client]bool),
 		Broadcast:    make(chan []byte),
 		VotedClients: make(map[*Client]bool), // Inicializamos el mapa de votantes
+		CurrentStation: &entity.Station{
+			ID:        "default-lofi",
+			Name:      "Lofi Girl Radio",
+			StreamURL: "https://play.streamafrica.net/lofiradio",
+		},
 	}
 }
 
