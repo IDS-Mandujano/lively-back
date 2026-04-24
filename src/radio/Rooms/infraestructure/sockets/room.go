@@ -29,6 +29,47 @@ type Room struct {
 	ProposedStation *entity.Station
 }
 
+func (r *Room) finalizeElectionIfNeededLocked() (bool, string, []byte) {
+	if !r.VoteActive {
+		return false, "", nil
+	}
+
+	totalVotes := r.VotesInFavor + r.VotesAgainst
+	totalClients := len(r.Clients)
+
+	// Si ya no hay nadie conectado, cerramos la votación para evitar sala bloqueada.
+	if totalClients == 0 {
+		r.VoteActive = false
+		r.ProposedStation = nil
+		r.VotedClients = make(map[*Client]bool)
+		return false, "", nil
+	}
+
+	if totalVotes < totalClients {
+		return false, "", nil
+	}
+
+	approved := r.VotesInFavor > r.VotesAgainst
+	r.VoteActive = false
+
+	var resultType string
+	var resultPayload interface{}
+	if approved && r.ProposedStation != nil {
+		r.CurrentStation = r.ProposedStation
+		resultType = "station_changed"
+		resultPayload = r.CurrentStation
+	} else {
+		resultType = "vote_failed"
+		resultPayload = map[string]string{"reason": "No alcanzó mayoría o fue un empate"}
+	}
+
+	notification, _ := json.Marshal(map[string]interface{}{
+		"type":    resultType,
+		"payload": resultPayload,
+	})
+	return true, resultType, notification
+}
+
 func NewRoom(id string) *Room {
 	return &Room{
 		ID:           id,
@@ -70,7 +111,13 @@ func (c *Client) ReadPump() {
 	defer func() {
 		c.Room.mu.Lock()
 		delete(c.Room.Clients, c)
+		electionFinished, _, notification := c.Room.finalizeElectionIfNeededLocked()
 		c.Room.mu.Unlock()
+
+		if electionFinished && notification != nil {
+			c.Room.Broadcast <- notification
+		}
+
 		c.Conn.Close()
 		log.Println("Un usuario se desconectó de la sala:", c.Room.ID)
 	}()
@@ -142,26 +189,10 @@ func (c *Client) ReadPump() {
 				c.Room.VotesAgainst++
 			}
 
-			totalVotes := c.Room.VotesInFavor + c.Room.VotesAgainst
-			totalClients := len(c.Room.Clients)
-
 			votesInFavor := c.Room.VotesInFavor
 			votesAgainst := c.Room.VotesAgainst
 
-			var electionFinished bool
-			var approved bool
-
-			// Si ya votaron todos los que están en la sala, cerramos la elección
-			if totalVotes >= totalClients {
-				electionFinished = true
-				approved = c.Room.VotesInFavor > c.Room.VotesAgainst
-				c.Room.VoteActive = false // Se cierra la urna
-
-				// Si ganó el Sí, actualizamos la música de la sala
-				if approved {
-					c.Room.CurrentStation = c.Room.ProposedStation
-				}
-			}
+			electionFinished, resultType, notification := c.Room.finalizeElectionIfNeededLocked()
 			c.Room.mu.Unlock()
 
 			// Enviamos el conteo parcial para que Android actualice la UI en tiempo real.
@@ -176,24 +207,14 @@ func (c *Client) ReadPump() {
 
 			// Si la elección terminó, le gritamos el resultado a todos
 			if electionFinished {
-				var resultType string
-				var resultPayload interface{}
-
-				if approved {
-					resultType = "station_changed"
-					resultPayload = c.Room.CurrentStation
+				if resultType == "station_changed" {
 					log.Printf("¡Votación APROBADA en %s! Cambiando de estación...", c.Room.ID)
 				} else {
-					resultType = "vote_failed"
-					resultPayload = map[string]string{"reason": "No alcanzó mayoría o fue un empate"}
 					log.Printf("Votación RECHAZADA en %s.", c.Room.ID)
 				}
-
-				notification, _ := json.Marshal(map[string]interface{}{
-					"type":    resultType,
-					"payload": resultPayload,
-				})
-				c.Room.Broadcast <- notification
+				if notification != nil {
+					c.Room.Broadcast <- notification
+				}
 			}
 		}
 	}
