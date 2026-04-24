@@ -101,6 +101,9 @@ func (api *RadioBrowserAPI) GetByCategory(ctx context.Context, category string, 
 			ImageURL:    raw.Favicon,
 			CountryCode: raw.CountryCode,
 			Tags:        tagsArray,
+			StationUUID: raw.StationUUID,
+			URLResolved: raw.URLResolved,
+			Favicon:     raw.Favicon,
 		})
 	}
 
@@ -153,6 +156,9 @@ func (api *RadioBrowserAPI) SearchByName(ctx context.Context, name string, limit
 			ImageURL:    raw.Favicon,
 			CountryCode: raw.CountryCode,
 			Tags:        tagsArray,
+			StationUUID: raw.StationUUID,
+			URLResolved: raw.URLResolved,
+			Favicon:     raw.Favicon,
 		})
 	}
 
@@ -203,6 +209,9 @@ func (api *RadioBrowserAPI) GetTop(ctx context.Context, limit int) ([]entity.Sta
 			ImageURL:    raw.Favicon,
 			CountryCode: raw.CountryCode,
 			Tags:        tagsArray,
+			StationUUID: raw.StationUUID,
+			URLResolved: raw.URLResolved,
+			Favicon:     raw.Favicon,
 		})
 	}
 
