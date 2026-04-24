@@ -32,7 +32,7 @@ func (c *CreateRoomController) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[rooms:create] payload id=%s name=%q created_by=%d", input.ID, input.Name, input.CreatedBy)
+	log.Printf("[rooms:create] payload name=%q created_by=%d", input.Name, input.CreatedBy)
 
 	room, err := c.useCase.Execute(r.Context(), input)
 	if err != nil {
@@ -41,7 +41,7 @@ func (c *CreateRoomController) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[rooms:create] success id=%s name=%q", room.ID, room.Name)
+	log.Printf("[rooms:create] success id=%d name=%q", room.ID, room.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

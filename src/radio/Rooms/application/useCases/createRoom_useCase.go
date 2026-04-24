@@ -8,7 +8,6 @@ import (
 )
 
 type CreateRoomInput struct {
-	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	CreatedBy   int    `json:"created_by"`
@@ -26,8 +25,8 @@ func NewCreateRoomUseCase(repo repository.IRoomRepository) *CreateRoomUseCase {
 
 func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput) (*entity.Room, error) {
 
-	if input.ID == "" || input.Name == "" {
-		return nil, errors.New("el ID de la sala y el nombre son obligatorios")
+	if input.Name == "" {
+		return nil, errors.New("el nombre de la sala es obligatorio")
 	}
 
 	if input.CreatedBy <= 0 {
@@ -35,7 +34,6 @@ func (uc *CreateRoomUseCase) Execute(ctx context.Context, input CreateRoomInput)
 	}
 
 	room := &entity.Room{
-		ID:          input.ID,
 		Name:        input.Name,
 		Description: input.Description,
 		CreatedBy:   input.CreatedBy,
